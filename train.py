@@ -1,13 +1,17 @@
 import torch 
 import torch.functional as F
 import torch.nn as nn
+import torch.optim as optim
+
+import time
+import random
 
 import model 
 import dictionary
 
 MAX_LENGTH = 1200
 
-def train(input_tensor, target_tensor, encoder, decoder,encoder_optimizer,  \
+def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer,  \
     decoder_optimizer, criterion, max_length=MAX_LENGTH):
     
     encoder_optimizer.zero_grad()
@@ -41,7 +45,7 @@ def train(input_tensor, target_tensor, encoder, decoder,encoder_optimizer,  \
     return loss.item() / target_length
 
 
-def evaluate(encoder, decoder, sentence,max_length=MAX_LENGTH):
+def evaluate(encoder, decoder,sentence, max_length=MAX_LENGTH):
     
     with torch.no_grad():
         input_tensor = []
@@ -74,3 +78,24 @@ def evaluate(encoder, decoder, sentence,max_length=MAX_LENGTH):
             else:
                 decoded_words.append(output_lang.index2word[topi.item()])
             """
+
+def trainIter(pairs, encoder, decoder,n_iters, learning_rate=0.01):
+    start = time.time()
+    
+    encoder_optimizer = optim.SGD(encoder.parameters(),lr=learning_rate)
+    decoder_optimizer = optim.SGD(decoder.parameters(),lr=learning_rate)
+    training_pairs = [random.choice(pairs) for i in range(n_iters)]
+
+    criterion = nn.NLLLoss()
+    for iter in range(1, n_iters+1):
+        training_pair = training_pairs[iter-1]
+        input_tensor = training_pair[0]
+        target_tensor = training_pair[1]
+        loss = train(input_tensor, target_tensor, encoder,  \
+                     decoder, encoder_optimizer, decoder_optimizer, criterion)
+        if iter %10 == 0:
+            print("%d %.4f\n", iter, loss)
+
+
+if __name__ == "__main__":
+    pass 
