@@ -8,6 +8,7 @@ import random
 
 import model 
 import dictionary
+import data
 
 MAX_LENGTH = 1200
 
@@ -79,7 +80,7 @@ def evaluate(encoder, decoder,sentence, max_length=MAX_LENGTH):
                 decoded_words.append(output_lang.index2word[topi.item()])
             """
 
-def trainIter(pairs, encoder, decoder,n_iters, learning_rate=0.01):
+def train_iter(dict1, dict2, pairs, encoder, decoder, n_iters, learning_rate=0.01):
     start = time.time()
     
     encoder_optimizer = optim.SGD(encoder.parameters(),lr=learning_rate)
@@ -89,8 +90,9 @@ def trainIter(pairs, encoder, decoder,n_iters, learning_rate=0.01):
     criterion = nn.NLLLoss()
     for iter in range(1, n_iters+1):
         training_pair = training_pairs[iter-1]
-        input_tensor = training_pair[0]
-        target_tensor = training_pair[1]
+        input_tensor = data.tensor_from_sentence(dict1,training_pair[0])
+        target_tensor = data.tensor_from_sentence(dict2,training_pair[1])
+
         loss = train(input_tensor, target_tensor, encoder,  \
                      decoder, encoder_optimizer, decoder_optimizer, criterion)
         if iter %10 == 0:
@@ -98,4 +100,5 @@ def trainIter(pairs, encoder, decoder,n_iters, learning_rate=0.01):
 
 
 if __name__ == "__main__":
-    pass 
+    dict1, dict2, pairs = data.load_data("eng", "fra")
+
