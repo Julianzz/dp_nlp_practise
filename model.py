@@ -1,12 +1,13 @@
 
 import torch
 import torch.nn as nn
-import torch.functional as F
+import torch.nn.functional as F
 
 class RNNEncoder(nn.Module):
     def __init__(self, input_size, hidden_size):
         super(RNNEncoder, self).__init__()
         self.hidden_size = hidden_size
+        self.input_size = input_size
         self.embedding = nn.Embedding(input_size,hidden_size)
         self.gru = nn.GRU(hidden_size, hidden_size)
 
@@ -40,7 +41,7 @@ class RNNDecoder(nn.Module):
 
 class AttnDecoder(nn.Module):
     
-    def __int__(self, hidden_size, output_size, max_length, dropout_p=0.1):
+    def __init__(self, hidden_size, output_size, max_length, dropout_p=0.1):
         super(AttnDecoder,self).__init__()
         self.hidden_size = hidden_size
         self.output_size = output_size
@@ -56,13 +57,26 @@ class AttnDecoder(nn.Module):
         self.out = nn.Linear(self.hidden_size,self.output_size)
 
     def forward(self, input, hidden, encoder_out):
+        
         embeded = self.embedding(input).view(1, 1, -1)
         embeded = self.dropout(embeded)
+        # embeded -> (1, 1, embeded)
         
-        atten_weight = F.softmax(self.attn(torch.cat(embeded[0], hidden[0])), dim=1)
-        atten_applied = torch.bmm(atten_weight.unsqueeze(0), encoder_out.unsqueeze(0))
+        cat = torch.cat((embeded[0], hidden[0]), 1)
+        #print("cat:", cat.size())
+        atten = self.attn(cat)
+        #print("atten:", atten.size(), atten)
+        atten_weight = F.softmax(atten, dim=1)
+        atten_weight_un = atten_weight.unsqueeze(0)
+        #print("atten_weight:", atten_weight.size(), atten_weight_un.size())
 
-        output = torch.cat( embeded[0], atten_applied[0], 1)
+        encoder_out_un = encoder_out.unsqueeze(0)
+    
+        atten_applied = torch.bmm(atten_weight_un, encoder_out_un)
+        #print("encoder_out:", encoder_out_un.size(), atten_weight_un.size(), atten_applied.size())
+
+
+        output = torch.cat((embeded[0], atten_applied[0]), 1)
         output = self.attn_combine(output).unsqueeze(0)
 
         output = F.relu(output)

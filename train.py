@@ -1,5 +1,5 @@
 import torch 
-import torch.functional as F
+import torch.nn.functional as F
 import torch.nn as nn
 import torch.optim as optim
 
@@ -10,10 +10,9 @@ import model
 import dictionary
 import data
 
-MAX_LENGTH = 1200
 
-def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer,  \
-    decoder_optimizer, criterion, max_length=MAX_LENGTH):
+def train(dict1, dict2, input_tensor, target_tensor, encoder, decoder, encoder_optimizer,  \
+    decoder_optimizer, criterion, max_length=data.MAX_LENGTH):
     
     encoder_optimizer.zero_grad()
     decoder_optimizer.zero_grad()
@@ -25,16 +24,20 @@ def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer,  \
     encoder_outputs = torch.zeros(max_length, encoder.hidden_size)
 
     for si in range(input_length):
-        encoder_output, encoder_hidden = encoder(input_tensor[si],encoder_hidden)
-        encoder_outputs[si] = encoder_output[0,0]
+        try:
+            encoder_output, encoder_hidden = encoder(input_tensor[si],encoder_hidden)
+            encoder_outputs[si] = encoder_output[0,0]
+        except:
+            print("-----{}  {}".format(input_tensor[si],encoder.hidden_size))
+            raise
 
-    decoder_input = torch.tensor([[dictionary.SOS_token]])
+    decoder_input = torch.tensor([[dict2.sos_index]])
     decoder_hidden = encoder_hidden
 
     loss = 0
     for di in range(target_length):
         decoder_output, decoder_hidden, decoder_attention = decoder(decoder_input, \
-            decoder_hidden,encoder_outputs)
+            decoder_hidden, encoder_outputs)
         loss += criterion(decoder_output,target_tensor[di])
         decoder_input = target_tensor[di]
 
@@ -46,7 +49,7 @@ def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer,  \
     return loss.item() / target_length
 
 
-def evaluate(encoder, decoder,sentence, max_length=MAX_LENGTH):
+def evaluate(encoder, decoder,sentence, max_length=data.MAX_LENGTH):
     
     with torch.no_grad():
         input_tensor = []
@@ -93,12 +96,23 @@ def train_iter(dict1, dict2, pairs, encoder, decoder, n_iters, learning_rate=0.0
         input_tensor = data.tensor_from_sentence(dict1,training_pair[0])
         target_tensor = data.tensor_from_sentence(dict2,training_pair[1])
 
-        loss = train(input_tensor, target_tensor, encoder,  \
+        loss = train(dict1, dict2, input_tensor, target_tensor, encoder,  \
                      decoder, encoder_optimizer, decoder_optimizer, criterion)
         if iter %10 == 0:
-            print("%d %.4f\n", iter, loss)
+            print("%d %.4f"%(iter, loss))
 
 
 if __name__ == "__main__":
     dict1, dict2, pairs = data.load_data("eng", "fra")
 
+    input_size = len(dict1.word_indexes)
+    output_size = len(dict2.word_indexes)
+
+    hidden_size = 8
+
+    print("---------{}  {}".format(input_size, output_size, hidden_size))
+
+    encoder = model.RNNEncoder(input_size, hidden_size)
+    decoder = model.AttnDecoder(hidden_size, output_size, data.MAX_LENGTH)
+
+    train_iter(dict1, dict2, pairs, encoder, decoder, 10000)    

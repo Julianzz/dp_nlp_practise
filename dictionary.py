@@ -33,7 +33,7 @@ class Dictionary(object):
 
     def add_word(self,word): 
         if not word in self.word_indexes:
-            index = len(self.words) + 1
+            index = len(self.words) 
             self.words.append(word)
             self.word_indexes[word] = index
 
