@@ -41,3 +41,6 @@ class Dictionary(object):
         if word not in self.word_indexes:
             return self.word_indexes[self.unk]
         return self.word_indexes[word]
+
+    def index_to_word(self, index):
+        return self.words[index]

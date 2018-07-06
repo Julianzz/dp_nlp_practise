@@ -56,12 +56,13 @@ class AttnDecoder(nn.Module):
         self.gru = nn.GRU(self.hidden_size, self.hidden_size)
         self.out = nn.Linear(self.hidden_size,self.output_size)
 
-    def forward(self, input, hidden, encoder_out):
+    def forward(self, input, hidden, encoder_out, training=True):
         
         embeded = self.embedding(input).view(1, 1, -1)
-        embeded = self.dropout(embeded)
+        if training:
+            embeded = self.dropout(embeded)
         # embeded -> (1, 1, embeded)
-        
+
         cat = torch.cat((embeded[0], hidden[0]), 1)
         #print("cat:", cat.size())
         atten = self.attn(cat)
@@ -74,7 +75,6 @@ class AttnDecoder(nn.Module):
     
         atten_applied = torch.bmm(atten_weight_un, encoder_out_un)
         #print("encoder_out:", encoder_out_un.size(), atten_weight_un.size(), atten_applied.size())
-
 
         output = torch.cat((embeded[0], atten_applied[0]), 1)
         output = self.attn_combine(output).unsqueeze(0)
