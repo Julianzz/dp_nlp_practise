@@ -69,6 +69,7 @@ def train_iter(dict1, dict2, pairs, encoder, decoder, n_iters, learning_rate=0.0
     torch.save(encoder,"model/encoder.pth")
     torch.save(decoder, "model/decoder.pth")
 
+import os
 
 if __name__ == "__main__":
     
@@ -77,7 +78,17 @@ if __name__ == "__main__":
     input_size = len(dict1.word_indexes)
     output_size = len(dict2.word_indexes)
     hidden_size = 8
-    encoder = model.RNNEncoder(input_size, hidden_size)
-    decoder = model.AttnDecoder(hidden_size, output_size, data.MAX_LENGTH)
+
+    encoder_model_file = "model/encoder.pth"
+    if os.path.exists(encoder_model_file):
+        encoder = torch.load(encoder_model_file)
+    else:
+        encoder = model.RNNEncoder(input_size, hidden_size)
+
+    decode_model_file = "model/decoder.pth"
+    if os.path.exists(decode_model_file):
+        decoder = torch.load(decode_model_file)
+    else:
+        decoder = model.AttnDecoder(hidden_size, output_size, data.MAX_LENGTH)
 
     train_iter(dict1, dict2, pairs, encoder, decoder, 2000)    
